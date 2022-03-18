@@ -1,6 +1,7 @@
 #pragma once
 #include "Application/ApplicationLayer.h"
 #include "json.hpp"
+#include "Gameplay/Scene.h"
 
 /**
  * This example layer handles creating a default test scene, which we will use 
@@ -16,7 +17,18 @@ public:
 	// Inherited from ApplicationLayer
 
 	virtual void OnAppLoad(const nlohmann::json& config) override;
+	virtual void OnUpdate() override;
 
 protected:
 	void _CreateScene();
+
+	Gameplay::Scene::Sptr _scene;
+
+	Texture3D::Sptr coolLUT;
+	Texture3D::Sptr warmLUT;
+	Texture3D::Sptr customLUT;
+
+	bool warmEnabled = false;
+	bool coolEnabled = false;
+	bool customEnabled = false;
 };

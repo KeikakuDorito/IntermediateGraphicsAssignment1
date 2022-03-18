@@ -15,6 +15,8 @@ layout(location = 0) out vec4 frag_color;
 struct Material {
 	sampler2D Diffuse;
 	float     Shininess;
+//	bool      AmbientEnabled;
+//	bool      SpecularEnabled;
 };
 // Create a uniform for the material
 uniform Material u_Material;
@@ -47,4 +49,5 @@ void main() {
 	vec3 result = lightAccumulation  * inColor * textureColor.rgb;
 
 	frag_color = vec4(ColorCorrect(result), textureColor.a);
+
 }

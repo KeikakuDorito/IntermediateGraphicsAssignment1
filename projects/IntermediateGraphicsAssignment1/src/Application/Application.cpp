@@ -37,6 +37,7 @@
 #include "Gameplay/Components/Camera.h"
 #include "Gameplay/Components/RotatingBehaviour.h"
 #include "Gameplay/Components/JumpBehaviour.h"
+#include "Gameplay/Components//MovementBehaviour.h"
 #include "Gameplay/Components/RenderComponent.h"
 #include "Gameplay/Components/MaterialSwapBehaviour.h"
 #include "Gameplay/Components/TriggerVolumeEnterBehaviour.h"
@@ -263,6 +264,7 @@ void Application::_RegisterClasses()
 	ComponentManager::RegisterType<TriggerVolume>();
 	ComponentManager::RegisterType<RotatingBehaviour>();
 	ComponentManager::RegisterType<JumpBehaviour>();
+	ComponentManager::RegisterType<MovementBehaviour>();
 	ComponentManager::RegisterType<MaterialSwapBehaviour>();
 	ComponentManager::RegisterType<TriggerVolumeEnterBehaviour>();
 	ComponentManager::RegisterType<SimpleCameraControl>();

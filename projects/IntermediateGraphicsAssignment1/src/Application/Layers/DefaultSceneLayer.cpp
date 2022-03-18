@@ -42,6 +42,7 @@
 #include "Gameplay/Components/Camera.h"
 #include "Gameplay/Components/RotatingBehaviour.h"
 #include "Gameplay/Components/JumpBehaviour.h"
+#include "Gameplay/Components/MovementBehaviour.h"
 #include "Gameplay/Components/RenderComponent.h"
 #include "Gameplay/Components/MaterialSwapBehaviour.h"
 #include "Gameplay/Components/TriggerVolumeEnterBehaviour.h"
@@ -68,17 +69,91 @@
 #include "Graphics/Textures/Texture3D.h"
 #include "Graphics/Textures/Texture1D.h"
 
+#include "RenderLayer.h"
+
 DefaultSceneLayer::DefaultSceneLayer() :
 	ApplicationLayer()
 {
 	Name = "Default Scene";
-	Overrides = AppLayerFunctions::OnAppLoad;
+	Overrides = AppLayerFunctions::OnAppLoad | AppLayerFunctions::OnUpdate;
 }
 
 DefaultSceneLayer::~DefaultSceneLayer() = default;
 
 void DefaultSceneLayer::OnAppLoad(const nlohmann::json& config) {
 	_CreateScene();
+}
+
+
+void DefaultSceneLayer::OnUpdate()
+{
+	Application& app = Application::Get();
+	_scene = app.CurrentScene();
+	RenderLayer::Sptr _renderLayer = app.GetLayer<RenderLayer>();
+	
+
+	RenderFlags _renderFlags = _renderLayer->GetRenderFlags();
+	bool _color_correctionEnabled = *(_renderFlags & RenderFlags::EnableColorCorrection);
+
+
+
+
+	if (InputEngine::GetKeyState(GLFW_KEY_8) == ButtonState::Pressed) { //Warm LUT
+		if (!warmEnabled) {
+			_color_correctionEnabled = true;
+			_scene->SetColorLUT(warmLUT);
+			warmEnabled = true;
+			coolEnabled = false;
+			customEnabled = false;
+			std::cout << "Warm LUT On" << std::endl;
+		}
+		else {
+			_color_correctionEnabled = false;
+			warmEnabled = false;
+			coolEnabled = false;
+			customEnabled = false;
+		}
+		_renderFlags = (_renderFlags & ~*RenderFlags::EnableColorCorrection) | (_color_correctionEnabled ? RenderFlags::EnableColorCorrection : RenderFlags::None);
+		_renderLayer->SetRenderFlags(_renderFlags);
+	}
+
+	if (InputEngine::GetKeyState(GLFW_KEY_9) == ButtonState::Pressed) { //Cool LUT
+		if (!coolEnabled) {
+			_color_correctionEnabled = true;
+			_scene->SetColorLUT(coolLUT);
+			warmEnabled = false;
+			coolEnabled = true;
+			customEnabled = false;
+			std::cout << "Cool LUT On" << std::endl;
+		}
+		else {
+			_color_correctionEnabled = false;
+			warmEnabled = false;
+			coolEnabled = false;
+			customEnabled = false;
+		}
+		_renderFlags = (_renderFlags & ~*RenderFlags::EnableColorCorrection) | (_color_correctionEnabled ? RenderFlags::EnableColorCorrection : RenderFlags::None);
+		_renderLayer->SetRenderFlags(_renderFlags);
+	}
+
+	if (InputEngine::GetKeyState(GLFW_KEY_0) == ButtonState::Pressed) { //Custom LUT
+		if (!customEnabled) {
+			_color_correctionEnabled = true;
+			_scene->SetColorLUT(customLUT);
+			warmEnabled = false;
+			coolEnabled = false;
+			customEnabled = true;
+			std::cout << "PURPLEWORLD LUT On" << std::endl;
+		}
+		else {
+			_color_correctionEnabled = false;
+			warmEnabled = false;
+			coolEnabled = false;
+			customEnabled = false;
+		}
+		_renderFlags = (_renderFlags & ~*RenderFlags::EnableColorCorrection) | (_color_correctionEnabled ? RenderFlags::EnableColorCorrection : RenderFlags::None);
+		_renderLayer->SetRenderFlags(_renderFlags);
+	}
 }
 
 void DefaultSceneLayer::_CreateScene()
@@ -100,7 +175,7 @@ void DefaultSceneLayer::_CreateScene()
 			{ ShaderPartType::Fragment, "shaders/fragment_shaders/frag_environment_reflective.glsl" }
 		});
 		reflectiveShader->SetDebugName("Reflective");
-
+		
 		// This shader handles our basic materials without reflections (cause they expensive)
 		ShaderProgram::Sptr basicShader = ResourceManager::CreateAsset<ShaderProgram>(std::unordered_map<ShaderPartType, std::string>{
 			{ ShaderPartType::Vertex, "shaders/vertex_shaders/basic.glsl" },
@@ -153,6 +228,8 @@ void DefaultSceneLayer::_CreateScene()
 		// Load in the meshes
 		MeshResource::Sptr monkeyMesh = ResourceManager::CreateAsset<MeshResource>("Monkey.obj");
 
+		MeshResource::Sptr stoneMesh = ResourceManager::CreateAsset<MeshResource>("Stone.obj");
+
 		// Load in some textures
 		Texture2D::Sptr    boxTexture   = ResourceManager::CreateAsset<Texture2D>("textures/box-diffuse.png");
 		Texture2D::Sptr    boxSpec      = ResourceManager::CreateAsset<Texture2D>("textures/box-specular.png");
@@ -165,6 +242,7 @@ void DefaultSceneLayer::_CreateScene()
 		// Loading in a 1D LUT
 		Texture1D::Sptr toonLut = ResourceManager::CreateAsset<Texture1D>("luts/toon-1D.png"); 
 		toonLut->SetWrap(WrapMode::ClampToEdge);
+
 
 		// Here we'll load in the cubemap, as well as a special shader to handle drawing the skybox
 		TextureCube::Sptr testCubemap = ResourceManager::CreateAsset<TextureCube>("cubemaps/ocean/ocean.jpg");
@@ -183,10 +261,19 @@ void DefaultSceneLayer::_CreateScene()
 		scene->SetSkyboxRotation(glm::rotate(MAT4_IDENTITY, glm::half_pi<float>(), glm::vec3(1.0f, 0.0f, 0.0f)));
 
 		// Loading in a color lookup table
-		Texture3D::Sptr lut = ResourceManager::CreateAsset<Texture3D>("luts/cool.CUBE");  
+		coolLUT = ResourceManager::CreateAsset<Texture3D>("luts/cool.CUBE");
+		warmLUT = ResourceManager::CreateAsset<Texture3D>("luts/warm.CUBE");
+		customLUT = ResourceManager::CreateAsset<Texture3D>("luts/I LOVE LEAN.CUBE");
 
 		// Configure the color correction LUT
-		scene->SetColorLUT(lut);
+		scene->SetColorLUT(coolLUT);
+
+
+		RenderLayer::Sptr _renderLayer = app.GetLayer<RenderLayer>();
+		RenderFlags _renderFlags = _renderLayer->GetRenderFlags();
+		_renderFlags = (_renderFlags & ~*RenderFlags::EnableColorCorrection) | (false ? RenderFlags::EnableColorCorrection : RenderFlags::None);
+		_renderLayer->SetRenderFlags(_renderFlags);
+
 
 		// Create our materials
 		// This will be our box material, with no environment reflections
@@ -204,6 +291,7 @@ void DefaultSceneLayer::_CreateScene()
 			monkeyMaterial->Set("u_Material.Diffuse", monkeyTex);
 			monkeyMaterial->Set("u_Material.Shininess", 0.5f);
 		}
+
 
 		// This will be the reflective material, we'll make the whole thing 90% reflective
 		Material::Sptr testMaterial = ResourceManager::CreateAsset<Material>(specShader);
@@ -236,7 +324,6 @@ void DefaultSceneLayer::_CreateScene()
 			toonMaterial->Set("u_Material.Shininess", 0.1f);
 			toonMaterial->Set("u_Material.Steps", 8);
 		}
-
 
 		Material::Sptr displacementTest = ResourceManager::CreateAsset<Material>(displacementShader);
 		{
@@ -278,15 +365,17 @@ void DefaultSceneLayer::_CreateScene()
 
 		// Create some lights for our scene
 		scene->Lights.resize(3);
-		scene->Lights[0].Position = glm::vec3(0.0f, 1.0f, 3.0f);
+		scene->Lights[0].Position = glm::vec3(0.0f, 0.0f, 20.0f);
 		scene->Lights[0].Color = glm::vec3(1.0f, 1.0f, 1.0f);
 		scene->Lights[0].Range = 100.0f;
+		scene->Lights[1].Position = glm::vec3(-5.0f, -5.0f, 20.0f);
+		scene->Lights[1].Color = glm::vec3(1.0f, 1.0f, 1.0f);
+		scene->Lights[1].Range = 100.0f;
+		scene->Lights[2].Position = glm::vec3(5.0f, 5.0f, 20.0f);
+		scene->Lights[2].Color = glm::vec3(1.0f, 1.0f, 1.0f);
+		scene->Lights[2].Range = 100.0f;
 
-		scene->Lights[1].Position = glm::vec3(1.0f, 0.0f, 3.0f);
-		scene->Lights[1].Color = glm::vec3(0.2f, 0.8f, 0.1f);
 
-		scene->Lights[2].Position = glm::vec3(0.0f, 1.0f, 3.0f);
-		scene->Lights[2].Color = glm::vec3(1.0f, 0.2f, 0.1f);
 
 		// We'll create a mesh that is a simple plane that we can resize later
 		MeshResource::Sptr planeMesh = ResourceManager::CreateAsset<MeshResource>();
@@ -300,7 +389,7 @@ void DefaultSceneLayer::_CreateScene()
 		// Set up the scene's camera
 		GameObject::Sptr camera = scene->MainCamera->GetGameObject()->SelfRef();
 		{
-			camera->SetPostion({ -9, -6, 15 });
+			camera->SetPostion({ 0.f, -15.f, 6.5f});
 			camera->LookAt(glm::vec3(0.0f));
 
 			camera->Add<SimpleCameraControl>();
@@ -322,33 +411,217 @@ void DefaultSceneLayer::_CreateScene()
 			// Create and attach a RenderComponent to the object to draw our mesh
 			RenderComponent::Sptr renderer = plane->Add<RenderComponent>();
 			renderer->SetMesh(tiledMesh);
-			renderer->SetMaterial(boxMaterial);
+			//renderer->SetMaterial(boxMaterial);
 
 			// Attach a plane collider that extends infinitely along the X/Y axis
 			RigidBody::Sptr physics = plane->Add<RigidBody>(/*static by default*/);
 			physics->AddCollider(BoxCollider::Create(glm::vec3(50.0f, 50.0f, 1.0f)))->SetPosition({ 0,0,-1 });
 		}
 
-		GameObject::Sptr monkey1 = scene->CreateGameObject("Monkey 1");
+		MeshResource::Sptr playerMesh = ResourceManager::CreateAsset<MeshResource>("BasicCharacter.obj");
+		Texture2D::Sptr playerTexture = ResourceManager::CreateAsset<Texture2D>("textures/dream.png");
+
+		Texture1D::Sptr dreamLUT = ResourceManager::CreateAsset<Texture1D>("luts/dreamtoon1d.png");
+		dreamLUT->SetWrap(WrapMode::ClampToEdge);
+
+		// Our toon shader material
+		Material::Sptr playerMaterial = ResourceManager::CreateAsset<Material>(toonShader);
+		{
+			playerMaterial->Name = "Dream Toon";
+			playerMaterial->Set("u_Material.Diffuse", playerTexture);
+			playerMaterial->Set("s_ToonTerm", dreamLUT);
+			playerMaterial->Set("u_Material.Shininess", 0.1f);
+			playerMaterial->Set("u_Material.Steps", 4);
+		}
+
+
+		GameObject::Sptr player = scene->CreateGameObject("Player");
 		{
 			// Set position in the scene
-			monkey1->SetPostion(glm::vec3(1.5f, 0.0f, 1.0f));
+			player->SetPostion(glm::vec3(1.5f, 0.0f, 1.0f));
+			player->SetRotation(glm::vec3(90.f, 0.0f, -90.0f));
 
 			// Add some behaviour that relies on the physics body
-			monkey1->Add<JumpBehaviour>();
+			player->Add<JumpBehaviour>();
+			player->Add<MovementBehaviour>();
 
 			// Create and attach a renderer for the monkey
-			RenderComponent::Sptr renderer = monkey1->Add<RenderComponent>();
-			renderer->SetMesh(monkeyMesh);
-			renderer->SetMaterial(monkeyMaterial);
+			RenderComponent::Sptr renderer = player->Add<RenderComponent>();
+			renderer->SetMesh(playerMesh);
+			renderer->SetMaterial(playerMaterial);
+			
 
 			// Example of a trigger that interacts with static and kinematic bodies as well as dynamic bodies
-			TriggerVolume::Sptr trigger = monkey1->Add<TriggerVolume>();
-			trigger->SetFlags(TriggerTypeFlags::Statics | TriggerTypeFlags::Kinematics);
-			trigger->AddCollider(BoxCollider::Create(glm::vec3(1.0f)));
 
-			monkey1->Add<TriggerVolumeEnterBehaviour>();
+			RigidBody::Sptr physicsBody = player->Add<Gameplay::Physics::RigidBody>(RigidBodyType::Dynamic);
+			BoxCollider::Sptr boxCollider = BoxCollider::Create();
+			physicsBody->AddCollider(boxCollider);
 		}
+
+
+
+
+
+
+		MeshResource::Sptr hillMesh = ResourceManager::CreateAsset<MeshResource>("Ground.obj");
+		Texture2D::Sptr hillTexture = ResourceManager::CreateAsset<Texture2D>("textures/Floortex.png");
+
+
+		Material::Sptr hillMaterial = ResourceManager::CreateAsset<Material>(basicShader);
+		{
+			hillMaterial->Name = "Hill";
+			hillMaterial->Set("u_Material.Diffuse", hillTexture);
+			hillMaterial->Set("u_Material.Shininess", 0.0f);
+		}
+
+		GameObject::Sptr hill = scene->CreateGameObject("hill");
+		{
+			// Set position in the scene
+			hill->SetPostion(glm::vec3(0.0f, 0.0f, 1.0f));
+			hill->SetRotation(glm::vec3(90.f, 0.f, 0.f));
+
+			// Create and attach a renderer for the monkey
+			RenderComponent::Sptr renderer = hill->Add<RenderComponent>();
+			renderer->SetMesh(hillMesh);
+			renderer->SetMaterial(hillMaterial);
+
+		}
+
+
+		GameObject::Sptr swordStone = scene->CreateGameObject("Stone");
+		{
+			// Set position in the scene
+			swordStone->SetPostion(glm::vec3(0.0f, 0.0f, 1.0f));
+			swordStone->SetRotation(glm::vec3(90.f, 0.f, 0.f));
+
+			// Create and attach a renderer for the monkey
+			RenderComponent::Sptr renderer = swordStone->Add<RenderComponent>();
+			renderer->SetMesh(stoneMesh);
+			renderer->SetMaterial(hillMaterial);
+
+		}
+
+
+		MeshResource::Sptr gearMesh = ResourceManager::CreateAsset<MeshResource>("Gears.obj");
+		Texture2D::Sptr gearTexture = ResourceManager::CreateAsset<Texture2D>("textures/GearColor.png");
+
+
+		Material::Sptr gearMaterial = ResourceManager::CreateAsset<Material>(reflectiveShader);
+		{
+			gearMaterial->Name = "Gears";
+			gearMaterial->Set("u_Material.Diffuse", gearTexture);
+			gearMaterial->Set("u_Material.Shininess", 0.15f);
+		}
+
+		GameObject::Sptr gears = scene->CreateGameObject("Gears");
+		{
+			// Set position in the scene
+			gears->SetPostion(glm::vec3(0.0f, 0.0f, 1.0f));
+			gears->SetRotation(glm::vec3(90.f, 0.f, 0.f));
+
+			// Create and attach a renderer for the monkey
+			RenderComponent::Sptr renderer = gears->Add<RenderComponent>();
+			renderer->SetMesh(gearMesh);
+			renderer->SetMaterial(gearMaterial);
+
+		}
+
+
+
+
+		MeshResource::Sptr kingswordMesh = ResourceManager::CreateAsset<MeshResource>("Excalibur.obj");
+		Texture2D::Sptr kingswordTexture = ResourceManager::CreateAsset<Texture2D>("textures/swordUV.png");
+		Texture2D::Sptr kingswordSpecular = ResourceManager::CreateAsset<Texture2D>("textures/excaliburspecular.png");
+
+
+		Material::Sptr kingswordMaterial = ResourceManager::CreateAsset<Material>(specShader);
+		{
+			kingswordMaterial->Name = "Excalibur";
+			kingswordMaterial->Set("u_Material.Diffuse", kingswordTexture);
+			kingswordMaterial->Set("u_Material.Specular", kingswordSpecular);
+		}
+
+		GameObject::Sptr Excalibur = scene->CreateGameObject("kingsword");
+		{
+			// Set position in the scene
+			Excalibur->SetPostion(glm::vec3(0.0f, 0.0f, 1.0f));
+			Excalibur->SetRotation(glm::vec3(90.f, 0.f, 0.f));
+
+			// Create and attach a renderer for the monkey
+			RenderComponent::Sptr renderer = Excalibur->Add<RenderComponent>();
+			renderer->SetMesh(kingswordMesh);
+			renderer->SetMaterial(kingswordMaterial);
+
+		}
+
+
+
+		MeshResource::Sptr swordMesh = ResourceManager::CreateAsset<MeshResource>("ChippedSword.obj");
+		Texture2D::Sptr swordTexture = ResourceManager::CreateAsset<Texture2D>("textures/Chipped Sword.png");
+
+
+		Material::Sptr swordMaterial = ResourceManager::CreateAsset<Material>(basicShader);
+		{
+			swordMaterial->Name = "Chipped Sword Material";
+			swordMaterial->Set("u_Material.Diffuse", swordTexture);
+			swordMaterial->Set("u_Material.Shininess", 0.12f);
+		}
+
+		GameObject::Sptr sword1 = scene->CreateGameObject("Sword 1");
+		{
+			// Set position in the scene
+			sword1->SetPostion(glm::vec3(9.f, -2.72f, 1.32f));
+			sword1->SetRotation(glm::vec3(97.f, 177.f, -71.f));
+			sword1->SetScale(glm::vec3(2.f));
+
+			// Create and attach a renderer for the monkey
+			RenderComponent::Sptr renderer = sword1->Add<RenderComponent>();
+			renderer->SetMesh(swordMesh);
+			renderer->SetMaterial(swordMaterial);
+		}
+
+		GameObject::Sptr sword2 = scene->CreateGameObject("Sword 2");
+		{
+			// Set position in the scene
+			sword2->SetPostion(glm::vec3(-7.24f, -10.22f, 2.32f));
+			sword2->SetRotation(glm::vec3(91.f, 173.f, 83.f));
+			sword2->SetScale(glm::vec3(1.5f));
+
+			// Create and attach a renderer for the monkey
+			RenderComponent::Sptr renderer = sword2->Add<RenderComponent>();
+			renderer->SetMesh(swordMesh);
+			renderer->SetMaterial(swordMaterial);
+		}
+
+		GameObject::Sptr sword3 = scene->CreateGameObject("Sword 3");
+		{
+			// Set position in the scene
+			sword3->SetPostion(glm::vec3(8.37f, 5.81f, 2.75f));
+			sword3->SetRotation(glm::vec3(86.f, 170.f, -3.f));
+			sword3->SetScale(glm::vec3(2.f));
+
+			// Create and attach a renderer for the monkey
+			RenderComponent::Sptr renderer = sword3->Add<RenderComponent>();
+			renderer->SetMesh(swordMesh);
+			renderer->SetMaterial(swordMaterial);
+		}
+
+		GameObject::Sptr sword4 = scene->CreateGameObject("Sword 4");
+		{
+			// Set position in the scene
+			sword4->SetPostion(glm::vec3(-6.1f, 5.45f, 1.63f));
+			sword4->SetRotation(glm::vec3(90.f, -166.f, 57.f));
+			sword4->SetScale(glm::vec3(2.f));
+
+			// Create and attach a renderer for the monkey
+			RenderComponent::Sptr renderer = sword4->Add<RenderComponent>();
+			renderer->SetMesh(swordMesh);
+			renderer->SetMaterial(swordMaterial);
+		}
+
+
+
+
 
 		GameObject::Sptr demoBase = scene->CreateGameObject("Demo Parent");
 
@@ -360,7 +633,7 @@ void DefaultSceneLayer::_CreateScene()
 			boxMesh->GenerateMesh();
 
 			// Set and rotation position in the scene
-			specBox->SetPostion(glm::vec3(0, -4.0f, 1.0f));
+			specBox->SetPostion(glm::vec3(0, -15.f, 1.0f));
 
 			// Add a render component
 			RenderComponent::Sptr renderer = specBox->Add<RenderComponent>();
@@ -374,7 +647,7 @@ void DefaultSceneLayer::_CreateScene()
 		GameObject::Sptr foliageBall = scene->CreateGameObject("Foliage Sphere");
 		{
 			// Set and rotation position in the scene
-			foliageBall->SetPostion(glm::vec3(-4.0f, -4.0f, 1.0f));
+			foliageBall->SetPostion(glm::vec3(-4.0f, -15.f, 1.0f));
 
 			// Add a render component
 			RenderComponent::Sptr renderer = foliageBall->Add<RenderComponent>();
@@ -392,7 +665,7 @@ void DefaultSceneLayer::_CreateScene()
 			box->GenerateMesh();
 
 			// Set and rotation position in the scene
-			foliageBox->SetPostion(glm::vec3(-6.0f, -4.0f, 1.0f));
+			foliageBox->SetPostion(glm::vec3(-6.0f, -15.f, 1.0f));
 
 			// Add a render component
 			RenderComponent::Sptr renderer = foliageBox->Add<RenderComponent>();
@@ -402,24 +675,24 @@ void DefaultSceneLayer::_CreateScene()
 			demoBase->AddChild(foliageBox);
 		}
 
-		// Box to showcase the specular material
-		GameObject::Sptr toonBall = scene->CreateGameObject("Toon Object");
-		{
-			// Set and rotation position in the scene
-			toonBall->SetPostion(glm::vec3(-2.0f, -4.0f, 1.0f));
+		//// Box to showcase the specular material
+		//GameObject::Sptr toonBall = scene->CreateGameObject("Toon Object");
+		//{
+		//	// Set and rotation position in the scene
+		//	toonBall->SetPostion(glm::vec3(-2.0f, -4.0f, 1.0f));
 
-			// Add a render component
-			RenderComponent::Sptr renderer = toonBall->Add<RenderComponent>();
-			renderer->SetMesh(sphere);
-			renderer->SetMaterial(toonMaterial);
+		//	// Add a render component
+		//	RenderComponent::Sptr renderer = toonBall->Add<RenderComponent>();
+		//	renderer->SetMesh(sphere);
+		//	renderer->SetMaterial(toonMaterial);
 
-			demoBase->AddChild(toonBall);
-		}
+		//	demoBase->AddChild(toonBall);
+		//}
 
 		GameObject::Sptr displacementBall = scene->CreateGameObject("Displacement Object");
 		{
 			// Set and rotation position in the scene
-			displacementBall->SetPostion(glm::vec3(2.0f, -4.0f, 1.0f));
+			displacementBall->SetPostion(glm::vec3(2.0f, -15.f, 1.0f));
 
 			// Add a render component
 			RenderComponent::Sptr renderer = displacementBall->Add<RenderComponent>();
@@ -432,7 +705,7 @@ void DefaultSceneLayer::_CreateScene()
 		GameObject::Sptr multiTextureBall = scene->CreateGameObject("Multitextured Object");
 		{
 			// Set and rotation position in the scene 
-			multiTextureBall->SetPostion(glm::vec3(4.0f, -4.0f, 1.0f));
+			multiTextureBall->SetPostion(glm::vec3(4.0f, -15.f, 1.0f));
 
 			// Add a render component 
 			RenderComponent::Sptr renderer = multiTextureBall->Add<RenderComponent>();
@@ -445,7 +718,7 @@ void DefaultSceneLayer::_CreateScene()
 		GameObject::Sptr normalMapBall = scene->CreateGameObject("Normal Mapped Object");
 		{
 			// Set and rotation position in the scene 
-			normalMapBall->SetPostion(glm::vec3(6.0f, -4.0f, 1.0f));
+			normalMapBall->SetPostion(glm::vec3(6.0f, -15.f, 1.0f));
 
 			// Add a render component 
 			RenderComponent::Sptr renderer = normalMapBall->Add<RenderComponent>();
@@ -502,11 +775,11 @@ void DefaultSceneLayer::_CreateScene()
 		}
 		*/
 
-		GameObject::Sptr particles = scene->CreateGameObject("Particles");
+		/*GameObject::Sptr particles = scene->CreateGameObject("Particles");
 		{
 			ParticleSystem::Sptr particleManager = particles->Add<ParticleSystem>();  
 			particleManager->AddEmitter(glm::vec3(0.0f), glm::vec3(0.0f, -1.0f, 10.0f), 10.0f, glm::vec4(0.0f, 1.0f, 0.0f, 1.0f)); 
-		}
+		}*/
 
 		GuiBatcher::SetDefaultTexture(ResourceManager::CreateAsset<Texture2D>("textures/ui-sprite.png"));
 		GuiBatcher::SetDefaultBorderRadius(8);
