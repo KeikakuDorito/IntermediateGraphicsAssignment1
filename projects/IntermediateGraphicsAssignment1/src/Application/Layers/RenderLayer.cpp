@@ -89,7 +89,10 @@ void RenderLayer::OnRender(const Framebuffer::Sptr& prevLayer)
 	frameData.u_ViewProjection = camera->GetViewProjection();
 	frameData.u_CameraPos = glm::vec4(camera->GetGameObject()->GetPosition(), 1.0f);
 	frameData.u_Time = static_cast<float>(Timing::Current().TimeSinceSceneLoad());
-	frameData.u_DeltaTime = Timing::Current().DeltaTime();
+	frameData.u_Option = _renderOption;
+	/*frameData.u_SpecularWarp = _specularWrap;
+	frameData.u_DiffuseWarp = _diffuseWrap;*/
+	frameData.u_DeltaTime = Timing::Current().DeltaTime();	
 	frameData.u_RenderFlags = _renderFlags;
 	_frameUniforms->Update();
 
@@ -208,6 +211,18 @@ const glm::vec4& RenderLayer::GetClearColor() const {
 void RenderLayer::SetClearColor(const glm::vec4 & value) {
 	_clearColor = value;
 }
+
+void RenderLayer::SetRenderOption(float option) {
+	_renderOption = option;
+}
+//
+//void RenderLayer::DiffuseWrapEnabled(bool value) {
+//	_diffuseWrap = value;
+//}
+
+//void RenderLayer::SpecularWrapEnabled(bool value) {
+//	_specularWrap = value;
+//}
 
 void RenderLayer::SetRenderFlags(RenderFlags value) {
 	_renderFlags = value;

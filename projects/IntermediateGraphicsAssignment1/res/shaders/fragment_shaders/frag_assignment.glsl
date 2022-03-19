@@ -1,15 +1,31 @@
-/*
- * This is a partial file that allows shaders to add fragment shading 
- * to their final output. Defines a common Light structure, uniform buffer
- * and light parameters that can be shared between all lighting enabled
- * shaders
- * 
- * Usage:
- * vec3 normal = normalize(inNormal);
- * vec3 lighting = CalculateAllLightContribution(inWorldPos, normal, u_CamPos);
-*/
+#version 430
 
-// The maximum number of lights the shader supports, increasing this will lower performance!
+#include "../fragments/fs_common_inputs.glsl"
+#include "../fragments/frame_uniforms.glsl"
+
+// We output a single color to the color buffer
+layout(location = 0) out vec4 frag_color;
+
+////////////////////////////////////////////////////////////////
+/////////////// Instance Level Uniforms ////////////////////////
+////////////////////////////////////////////////////////////////
+
+// Represents a collection of attributes that would define a material
+// For instance, you can think of this like material settings in 
+// Unity
+struct Material {
+	sampler2D Diffuse;
+	float     Shininess;
+};
+// Create a uniform for the material
+uniform Material u_Material;
+
+uniform sampler1D s_ToonTerm;
+
+////////////////////////////////////////////////////////////////
+///////////// Application Level Uniforms ///////////////////////
+////////////////////////////////////////////////////////////////
+
 #define MAX_LIGHTS 8
 
 // Represents a single light source
@@ -54,6 +70,8 @@ vec3 SampleEnvironmentMap(vec3 normal) {
 // @param Light     The light to caluclate the contribution for
 // @param shininess The specular power for the fragment, between 0 and 1
 vec3 CalcPointLightContribution(vec3 worldPos, vec3 normal, vec3 viewDir, Light light, float shininess) {
+
+	
 	// Get the direction to the light in world space
 	vec3 toLight = light.Position.xyz - worldPos;
 	// Get distance between fragment and light
@@ -78,7 +96,17 @@ vec3 CalcPointLightContribution(vec3 worldPos, vec3 normal, vec3 viewDir, Light 
 	// We add the one to prevent divide by zero errors
 	float attenuation = clamp(1.0 / (1.0 + light.ColorAttenuation.w * pow(dist, 2)), 0, 1);
 
-	return (diffuseOut + specularOut) * attenuation;
+
+	if(u_Option == 3 || u_Option == 4 || u_Option == 5){
+		return specularOut * attenuation;
+	}
+	else{
+		return (diffuseOut + specularOut) * attenuation;
+	}
+//	else if(u_Option == 4 || u_Option == 5){
+//		return (diffuseOut + specularOut) * attenuation;
+//	}
+	//return (diffuseOut + specularOut) * attenuation;
 }
 
 /*
@@ -95,6 +123,7 @@ vec3 CalcAllLightContribution(vec3 worldPos, vec3 normal, vec3 camPos, float shi
 	// Direction between camera and fragment will be shared for all lights
 	vec3 viewDir  = normalize(camPos - worldPos);
 	
+
 	// Iterate over all lights
 	for(int ix = 0; ix < AmbientColAndNumLights.w && ix < MAX_LIGHTS; ix++) {
 		// Additive lighting model
@@ -102,4 +131,49 @@ vec3 CalcAllLightContribution(vec3 worldPos, vec3 normal, vec3 camPos, float shi
 	}
 
 	return lightAccumulation;
+}
+
+
+////////////////////////////////////////////////////////////////
+/////////////// Frame Level Uniforms ///////////////////////////
+////////////////////////////////////////////////////////////////
+
+#include "../fragments/color_correction.glsl"
+
+// https://learnopengl.com/Advanced-Lighting/Advanced-Lighting
+void main() {
+
+
+	// Normalize our input normal
+	vec3 normal = normalize(inNormal);
+
+	// Use the lighting calculation that we included from our partial file
+	vec3 lightAccumulation = CalcAllLightContribution(inWorldPos, normal, u_CamPos.xyz, u_Material.Shininess);
+
+
+	// Get the albedo from the diffuse / albedo map
+	vec4 textureColor = texture(u_Material.Diffuse, inUV);
+
+	// combine for the final result
+	vec3 result = lightAccumulation  * inColor * textureColor.rgb;
+
+
+	if(u_Option == 1){
+		frag_color = textureColor;
+	}
+	else if(u_Option == 2){
+		frag_color = vec4(ColorCorrect(AmbientColAndNumLights.rgb * textureColor.rgb), textureColor.a);
+	}
+//	else if(u_Option == 3){ //Showing Specular as a greyscale
+//		frag_color = vec4(ColorCorrect(lightAccumulation), textureColor.a);
+//	}
+	else if(u_Option == 5 || u_Option == 8){ //Toon Shader State, 5 for Toon Shader + Ambient + Specular only
+		result.r = texture(s_ToonTerm, result.r).r;
+		result.g = texture(s_ToonTerm, result.g).g;
+		result.b = texture(s_ToonTerm, result.b).b;
+		frag_color = vec4(ColorCorrect(result), textureColor.a);
+	}
+	else{ //Otherwise just do the standard Tutorial Shading
+		frag_color = vec4(ColorCorrect(result), textureColor.a);
+	}
 }

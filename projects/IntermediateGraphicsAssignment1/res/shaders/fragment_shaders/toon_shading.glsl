@@ -11,7 +11,7 @@ layout(location = 0) out vec4 frag_color;
 struct Material {
 	sampler2D Diffuse;
 	float     Shininess;
-    int       Steps;
+	int       Steps;
 };
 // Create a uniform for the material
 uniform Material u_Material;
@@ -35,10 +35,10 @@ void main() {
 	// combine for the final result
 	vec3 result = lightAccumulation  * inColor * textureColor.rgb;
 
-    // Using a LUT to allow artists to tweak toon shading settings
-    result.r = texture(s_ToonTerm, result.r).r;
-    result.g = texture(s_ToonTerm, result.g).g;
-    result.b = texture(s_ToonTerm, result.b).b;
+	// Using a LUT to allow artists to tweak toon shading settings
+	result.r = texture(s_ToonTerm, result.r).r;
+	result.g = texture(s_ToonTerm, result.g).g;
+	result.b = texture(s_ToonTerm, result.b).b;
 
 	frag_color = vec4(result, textureColor.a);
 }

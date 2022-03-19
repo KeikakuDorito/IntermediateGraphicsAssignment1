@@ -90,13 +90,47 @@ void DefaultSceneLayer::OnUpdate()
 	Application& app = Application::Get();
 	_scene = app.CurrentScene();
 	RenderLayer::Sptr _renderLayer = app.GetLayer<RenderLayer>();
-	
 
 	RenderFlags _renderFlags = _renderLayer->GetRenderFlags();
 	bool _color_correctionEnabled = *(_renderFlags & RenderFlags::EnableColorCorrection);
+	
+	if (InputEngine::GetKeyState(GLFW_KEY_E) == ButtonState::Pressed) { //Revert to standard lighting
+		_renderLayer->SetRenderOption(0);
+	}
+	if (InputEngine::GetKeyState(GLFW_KEY_R) == ButtonState::Pressed) {
+		_renderLayer->SetRenderOption(8);
+	}
+	if (InputEngine::GetKeyState(GLFW_KEY_1) == ButtonState::Pressed) {
+		_renderLayer->SetRenderOption(1);
+		_scene->SetAmbientLight(glm::vec3(0.2f));
+	}
 
+	if (InputEngine::GetKeyState(GLFW_KEY_2) == ButtonState::Pressed) {
+		_renderLayer->SetRenderOption(2);
+		_scene->SetAmbientLight(glm::vec3(0.2f));
+	}
+	
+	if (InputEngine::GetKeyState(GLFW_KEY_3) == ButtonState::Pressed) {
+		_renderLayer->SetRenderOption(3);
+		_scene->SetAmbientLight(glm::vec3(0.0f));
+	}
 
+	if (InputEngine::GetKeyState(GLFW_KEY_4) == ButtonState::Pressed) {
+		_renderLayer->SetRenderOption(4);
+		_scene->SetAmbientLight(glm::vec3(0.2f));
+	}
 
+	if (InputEngine::GetKeyState(GLFW_KEY_5) == ButtonState::Pressed) {
+		_renderLayer->SetRenderOption(5);
+	}
+
+	if (InputEngine::GetKeyState(GLFW_KEY_6) == ButtonState::Pressed) {
+		
+	}
+
+	if (InputEngine::GetKeyState(GLFW_KEY_7) == ButtonState::Pressed) {
+		
+	}
 
 	if (InputEngine::GetKeyState(GLFW_KEY_8) == ButtonState::Pressed) { //Warm LUT
 		if (!warmEnabled) {
@@ -111,7 +145,7 @@ void DefaultSceneLayer::OnUpdate()
 			_color_correctionEnabled = false;
 			warmEnabled = false;
 			coolEnabled = false;
-			customEnabled = false;
+			customEnabled = false; 
 		}
 		_renderFlags = (_renderFlags & ~*RenderFlags::EnableColorCorrection) | (_color_correctionEnabled ? RenderFlags::EnableColorCorrection : RenderFlags::None);
 		_renderLayer->SetRenderFlags(_renderFlags);
@@ -182,6 +216,13 @@ void DefaultSceneLayer::_CreateScene()
 			{ ShaderPartType::Fragment, "shaders/fragment_shaders/frag_blinn_phong_textured.glsl" }
 		});
 		basicShader->SetDebugName("Blinn-phong");
+
+		// This shader handles our basic materials without reflections (cause they expensive)
+		ShaderProgram::Sptr assignmentShader = ResourceManager::CreateAsset<ShaderProgram>(std::unordered_map<ShaderPartType, std::string>{
+			{ ShaderPartType::Vertex, "shaders/vertex_shaders/basic.glsl" },
+			{ ShaderPartType::Fragment, "shaders/fragment_shaders/frag_assignment.glsl" }
+		});
+		assignmentShader->SetDebugName("Assignment 1 Shader");
 
 		// This shader handles our basic materials without reflections (cause they expensive)
 		ShaderProgram::Sptr specShader = ResourceManager::CreateAsset<ShaderProgram>(std::unordered_map<ShaderPartType, std::string>{
@@ -367,15 +408,13 @@ void DefaultSceneLayer::_CreateScene()
 		scene->Lights.resize(3);
 		scene->Lights[0].Position = glm::vec3(0.0f, 0.0f, 20.0f);
 		scene->Lights[0].Color = glm::vec3(1.0f, 1.0f, 1.0f);
-		scene->Lights[0].Range = 100.0f;
+		scene->Lights[0].Range = 50.0f;
 		scene->Lights[1].Position = glm::vec3(-5.0f, -5.0f, 20.0f);
 		scene->Lights[1].Color = glm::vec3(1.0f, 1.0f, 1.0f);
-		scene->Lights[1].Range = 100.0f;
+		scene->Lights[1].Range = 0.0f;
 		scene->Lights[2].Position = glm::vec3(5.0f, 5.0f, 20.0f);
 		scene->Lights[2].Color = glm::vec3(1.0f, 1.0f, 1.0f);
-		scene->Lights[2].Range = 100.0f;
-
-
+		scene->Lights[2].Range = 0.0f;
 
 		// We'll create a mesh that is a simple plane that we can resize later
 		MeshResource::Sptr planeMesh = ResourceManager::CreateAsset<MeshResource>();
@@ -425,13 +464,12 @@ void DefaultSceneLayer::_CreateScene()
 		dreamLUT->SetWrap(WrapMode::ClampToEdge);
 
 		// Our toon shader material
-		Material::Sptr playerMaterial = ResourceManager::CreateAsset<Material>(toonShader);
+		Material::Sptr playerMaterial = ResourceManager::CreateAsset<Material>(assignmentShader);
 		{
 			playerMaterial->Name = "Dream Toon";
 			playerMaterial->Set("u_Material.Diffuse", playerTexture);
 			playerMaterial->Set("s_ToonTerm", dreamLUT);
 			playerMaterial->Set("u_Material.Shininess", 0.1f);
-			playerMaterial->Set("u_Material.Steps", 4);
 		}
 
 
@@ -467,10 +505,11 @@ void DefaultSceneLayer::_CreateScene()
 		Texture2D::Sptr hillTexture = ResourceManager::CreateAsset<Texture2D>("textures/Floortex.png");
 
 
-		Material::Sptr hillMaterial = ResourceManager::CreateAsset<Material>(basicShader);
+		Material::Sptr hillMaterial = ResourceManager::CreateAsset<Material>(assignmentShader);
 		{
 			hillMaterial->Name = "Hill";
 			hillMaterial->Set("u_Material.Diffuse", hillTexture);
+			hillMaterial->Set("s_ToonTerm", dreamLUT);
 			hillMaterial->Set("u_Material.Shininess", 0.0f);
 		}
 
@@ -506,10 +545,11 @@ void DefaultSceneLayer::_CreateScene()
 		Texture2D::Sptr gearTexture = ResourceManager::CreateAsset<Texture2D>("textures/GearColor.png");
 
 
-		Material::Sptr gearMaterial = ResourceManager::CreateAsset<Material>(reflectiveShader);
+		Material::Sptr gearMaterial = ResourceManager::CreateAsset<Material>(assignmentShader);
 		{
 			gearMaterial->Name = "Gears";
 			gearMaterial->Set("u_Material.Diffuse", gearTexture);
+			gearMaterial->Set("s_ToonTerm", dreamLUT);
 			gearMaterial->Set("u_Material.Shininess", 0.15f);
 		}
 
@@ -534,11 +574,13 @@ void DefaultSceneLayer::_CreateScene()
 		Texture2D::Sptr kingswordSpecular = ResourceManager::CreateAsset<Texture2D>("textures/excaliburspecular.png");
 
 
-		Material::Sptr kingswordMaterial = ResourceManager::CreateAsset<Material>(specShader);
+		Material::Sptr kingswordMaterial = ResourceManager::CreateAsset<Material>(assignmentShader);
 		{
 			kingswordMaterial->Name = "Excalibur";
 			kingswordMaterial->Set("u_Material.Diffuse", kingswordTexture);
-			kingswordMaterial->Set("u_Material.Specular", kingswordSpecular);
+			kingswordMaterial->Set("u_Material.Shininess", 0.7f);
+			kingswordMaterial->Set("s_ToonTerm", dreamLUT);
+			//kingswordMaterial->Set("u_Material.Specular", kingswordSpecular);
 		}
 
 		GameObject::Sptr Excalibur = scene->CreateGameObject("kingsword");
@@ -560,11 +602,12 @@ void DefaultSceneLayer::_CreateScene()
 		Texture2D::Sptr swordTexture = ResourceManager::CreateAsset<Texture2D>("textures/Chipped Sword.png");
 
 
-		Material::Sptr swordMaterial = ResourceManager::CreateAsset<Material>(basicShader);
+		Material::Sptr swordMaterial = ResourceManager::CreateAsset<Material>(assignmentShader);
 		{
 			swordMaterial->Name = "Chipped Sword Material";
 			swordMaterial->Set("u_Material.Diffuse", swordTexture);
 			swordMaterial->Set("u_Material.Shininess", 0.12f);
+			swordMaterial->Set("s_ToonTerm", dreamLUT);
 		}
 
 		GameObject::Sptr sword1 = scene->CreateGameObject("Sword 1");

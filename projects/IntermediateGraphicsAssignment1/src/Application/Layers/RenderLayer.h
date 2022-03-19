@@ -28,6 +28,13 @@ public:
 		float u_Time;
 		// The time in seconds since the previous frame
 		float u_DeltaTime;
+		//Option for Lighting Rendering
+		float u_Option;
+		
+		/*bool u_DiffuseWarp;
+
+		bool u_SpecularWarp;*/
+
 		// Bitfield representing up to 32 bool values to enable/disable stuff
 		RenderFlags u_RenderFlags;
 	};
@@ -58,6 +65,11 @@ public:
 	const glm::vec4& GetClearColor() const;
 	void SetClearColor(const glm::vec4& value);
 
+	void SetRenderOption(float option);
+
+	/*void RenderLayer::DiffuseWrapEnabled(bool value);
+	void RenderLayer::SpecularWrapEnabled(bool value);*/
+
 	void SetRenderFlags(RenderFlags value);
 	RenderFlags GetRenderFlags() const;
 
@@ -73,6 +85,10 @@ protected:
 	bool              _blitFbo;
 	glm::vec4         _clearColor;
 	RenderFlags       _renderFlags;
+
+	float _renderOption = 0;
+	/*bool _diffuseWrap = false;
+	bool _specularWrap = false;*/
 
 	const int FRAME_UBO_BINDING = 0;
 	UniformBuffer<FrameLevelUniforms>::Sptr _frameUniforms;

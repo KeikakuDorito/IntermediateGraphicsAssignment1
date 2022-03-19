@@ -34,13 +34,13 @@ namespace Gameplay {
 		_gravity(glm::vec3(0.0f, 0.0f, -9.81f))
 	{
 		_lightingUbo = std::make_shared<UniformBuffer<LightingUboStruct>>();
-		_lightingUbo->GetData().AmbientCol = glm::vec3(0.1f);
+		_lightingUbo->GetData().AmbientCol = glm::vec3(0.2f);
 		_lightingUbo->Update();
 		_lightingUbo->Bind(LIGHT_UBO_BINDING_SLOT);
 
 		GameObject::Sptr mainCam = CreateGameObject("Main Camera");		
 		MainCamera = mainCam->Add<Camera>();
-
+		
 		_InitPhysics();
 
 	}
@@ -127,7 +127,7 @@ namespace Gameplay {
 	}
 
 	void Scene::SetAmbientLight(const glm::vec3& value) {
-		_lightingUbo->GetData().AmbientCol = glm::vec3(0.1f);
+		_lightingUbo->GetData().AmbientCol = value;
 		_lightingUbo->Update();
 	}
 
