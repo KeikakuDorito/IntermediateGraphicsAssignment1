@@ -31,9 +31,9 @@ public:
 		//Option for Lighting Rendering
 		float u_Option;
 		
-		/*bool u_DiffuseWarp;
+		int u_DiffuseWarp;
 
-		bool u_SpecularWarp;*/
+		int u_SpecularWarp;
 
 		// Bitfield representing up to 32 bool values to enable/disable stuff
 		RenderFlags u_RenderFlags;
@@ -67,8 +67,8 @@ public:
 
 	void SetRenderOption(float option);
 
-	/*void RenderLayer::DiffuseWrapEnabled(bool value);
-	void RenderLayer::SpecularWrapEnabled(bool value);*/
+	void RenderLayer::DiffuseWrapEnabled(bool value);
+	void RenderLayer::SpecularWrapEnabled(bool value);
 
 	void SetRenderFlags(RenderFlags value);
 	RenderFlags GetRenderFlags() const;
@@ -87,8 +87,8 @@ protected:
 	RenderFlags       _renderFlags;
 
 	float _renderOption = 0;
-	/*bool _diffuseWrap = false;
-	bool _specularWrap = false;*/
+	bool _diffuseWrap = false;
+	bool _specularWrap = false;
 
 	const int FRAME_UBO_BINDING = 0;
 	UniformBuffer<FrameLevelUniforms>::Sptr _frameUniforms;

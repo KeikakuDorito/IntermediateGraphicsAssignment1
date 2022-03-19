@@ -22,6 +22,10 @@ uniform Material u_Material;
 
 uniform sampler1D s_ToonTerm;
 
+uniform sampler1D s_SpecularRamp;
+
+uniform sampler1D s_DiffuseRamp;
+
 ////////////////////////////////////////////////////////////////
 ///////////// Application Level Uniforms ///////////////////////
 ////////////////////////////////////////////////////////////////
@@ -82,15 +86,35 @@ vec3 CalcPointLightContribution(vec3 worldPos, vec3 normal, vec3 viewDir, Light 
 	// Halfway vector between light normal and direction to camera
 	vec3 halfDir     = normalize(toLight + viewDir);
 
+	
 	// Calculate our specular power
 	float specPower  = pow(max(dot(normal, halfDir), 0.0), pow(256, shininess));
 	// Calculate specular color
 	vec3 specularOut = specPower * light.ColorAttenuation.rgb;
 
+
+	//Attempt using reference https://gamedev.stackexchange.com/questions/51063/what-is-ramp-shading-or-lighting
+//	if(u_SpecularWarp == 1){ 
+//		float rampCoords  = pow(dot(normal, halfDir) * 0.5 + 0.5, 0.0);
+//		vec3 specularOut = texture(s_SpecularRamp,rampCoords).rgb;
+//	}
+
+	if(u_SpecularWarp == 1){
+		specularOut.r = texture(s_SpecularRamp, specularOut.r).r;
+		specularOut.g = texture(s_SpecularRamp, specularOut.g).g;
+		specularOut.b = texture(s_SpecularRamp, specularOut.b).b;
+	}
+
 	// Calculate diffuse factor
 	float diffuseFactor = max(dot(normal, toLight), 0);
 	// Calculate diffuse color
 	vec3  diffuseOut = diffuseFactor * light.ColorAttenuation.rgb;
+
+	if(u_DiffuseWarp == 1){
+		diffuseOut.r = texture(s_DiffuseRamp, diffuseOut.r).r;
+		diffuseOut.g = texture(s_DiffuseRamp, diffuseOut.g).g;
+		diffuseOut.b = texture(s_DiffuseRamp, diffuseOut.b).b;
+	}
 
 	// We'll use a modified distance squared attenuation factor to keep it simple
 	// We add the one to prevent divide by zero errors

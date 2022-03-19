@@ -15,6 +15,10 @@ layout (std140, binding = 0) uniform b_FrameLevelUniforms {
 
     //Option Selected to Toggle Lighting
     uniform float u_Option;
+
+    uniform int u_DiffuseWarp;
+
+    uniform int u_SpecularWarp;
     // Lets us store up to 32 bool flags in one value
     uniform uint  u_Flags;
 };

@@ -125,11 +125,25 @@ void DefaultSceneLayer::OnUpdate()
 	}
 
 	if (InputEngine::GetKeyState(GLFW_KEY_6) == ButtonState::Pressed) {
-		
+		if (!diffuseWrapEnabled) {
+			diffuseWrapEnabled = true;
+			_renderLayer->DiffuseWrapEnabled(true);
+		}
+		else {
+			diffuseWrapEnabled = false;
+			_renderLayer->DiffuseWrapEnabled(false);
+		}
 	}
 
 	if (InputEngine::GetKeyState(GLFW_KEY_7) == ButtonState::Pressed) {
-		
+		if (!specularWrapEnabled) {
+			specularWrapEnabled = true;
+			_renderLayer->SpecularWrapEnabled(true);
+		}
+		else {
+			specularWrapEnabled = false;
+			_renderLayer->SpecularWrapEnabled(false);
+		}
 	}
 
 	if (InputEngine::GetKeyState(GLFW_KEY_8) == ButtonState::Pressed) { //Warm LUT
@@ -470,6 +484,8 @@ void DefaultSceneLayer::_CreateScene()
 			playerMaterial->Set("u_Material.Diffuse", playerTexture);
 			playerMaterial->Set("s_ToonTerm", dreamLUT);
 			playerMaterial->Set("u_Material.Shininess", 0.1f);
+			playerMaterial->Set("s_DiffuseRamp", dreamLUT);
+			playerMaterial->Set("s_SpecularRamp", dreamLUT);
 		}
 
 
@@ -511,6 +527,8 @@ void DefaultSceneLayer::_CreateScene()
 			hillMaterial->Set("u_Material.Diffuse", hillTexture);
 			hillMaterial->Set("s_ToonTerm", dreamLUT);
 			hillMaterial->Set("u_Material.Shininess", 0.0f);
+			hillMaterial->Set("s_DiffuseRamp", dreamLUT);
+			hillMaterial->Set("s_SpecularRamp", dreamLUT);
 		}
 
 		GameObject::Sptr hill = scene->CreateGameObject("hill");
@@ -550,7 +568,9 @@ void DefaultSceneLayer::_CreateScene()
 			gearMaterial->Name = "Gears";
 			gearMaterial->Set("u_Material.Diffuse", gearTexture);
 			gearMaterial->Set("s_ToonTerm", dreamLUT);
-			gearMaterial->Set("u_Material.Shininess", 0.15f);
+			gearMaterial->Set("u_Material.Shininess", 0.85f);
+			gearMaterial->Set("s_DiffuseRamp", dreamLUT);
+			gearMaterial->Set("s_SpecularRamp", dreamLUT);
 		}
 
 		GameObject::Sptr gears = scene->CreateGameObject("Gears");
@@ -580,6 +600,8 @@ void DefaultSceneLayer::_CreateScene()
 			kingswordMaterial->Set("u_Material.Diffuse", kingswordTexture);
 			kingswordMaterial->Set("u_Material.Shininess", 0.7f);
 			kingswordMaterial->Set("s_ToonTerm", dreamLUT);
+			kingswordMaterial->Set("s_DiffuseRamp", dreamLUT);
+			kingswordMaterial->Set("s_SpecularRamp", dreamLUT);
 			//kingswordMaterial->Set("u_Material.Specular", kingswordSpecular);
 		}
 
@@ -608,6 +630,8 @@ void DefaultSceneLayer::_CreateScene()
 			swordMaterial->Set("u_Material.Diffuse", swordTexture);
 			swordMaterial->Set("u_Material.Shininess", 0.12f);
 			swordMaterial->Set("s_ToonTerm", dreamLUT);
+			swordMaterial->Set("s_DiffuseRamp", dreamLUT);
+			swordMaterial->Set("s_SpecularRamp", dreamLUT);
 		}
 
 		GameObject::Sptr sword1 = scene->CreateGameObject("Sword 1");

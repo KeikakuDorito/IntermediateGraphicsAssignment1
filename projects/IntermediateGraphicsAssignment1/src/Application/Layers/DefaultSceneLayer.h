@@ -31,4 +31,7 @@ protected:
 	bool warmEnabled = false;
 	bool coolEnabled = false;
 	bool customEnabled = false;
+
+	bool diffuseWrapEnabled = false;
+	bool specularWrapEnabled = false;
 };
